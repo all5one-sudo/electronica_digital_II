@@ -15,16 +15,13 @@ INICIO
     
     BSF STATUS,RP1
     BSF STATUS,RP0
-    
-    MOVLW V_MAX 
-    MOVWF MAX
-  
     BSF STATUS,IRP ;para moverme con INDF por los bancos 2 y 3 (necesito el 3)
     
 REINICIO
     MOVLW D_INICIAL
     MOVWF FSR
-    
+    MOVLW V_MAX 
+    MOVWF MAX
 LOOP
     MOVF INDF,W
     CALL TABLA
