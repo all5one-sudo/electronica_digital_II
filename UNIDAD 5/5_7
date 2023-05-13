@@ -1,0 +1,71 @@
+#INCLUDE    <P16F887.INC>
+
+    LIST    P = 16F887
+
+	__CONFIG    _CONFIG1, _FOSC_INTRC_NOCLKOUT & _WDTE_OFF & _PWRTE_OFF & _MCLRE_ON & _CP_OFF & _CPD_OFF & _BOREN_ON & _IESO_ON & _FCMEN_ON & _LVP_ON
+	__CONFIG    _CONFIG2, _BOR4V_BOR40V & _WRT_OFF
+ 
+COUNT EQU 0X70; contar cantidad de veces
+        
+    ORG 0X00
+    GOTO CONFIG_
+ 
+    ORG 0X04
+    GOTO RUT_INT
+ 
+    ORG 0X05
+ 
+CONFIG_
+	BANKSEL TRISB	    ; Seteo RB0 como entrada
+	BSF TRISB,0
+	BANKSEL TRISD	    ; Seteo RD<7:0> como salida
+	MOVLW   b'00000000'	    
+	MOVWF   TRISD
+	BANKSEL ANSELH	    ; Seteo PORTB como digital.
+	CLRF    ANSELH
+	BANKSEL OPTION_REG	   
+	CLRF    OPTION_REG; config flanco descendente y activo pull
+	BANKSEL WPUB
+	BSF WPUB,0 ;solo en RB0
+	MOVLW b'10010000';activo interrupciones (RB0/INT y globales)
+	MOVWF INTCON
+	BANKSEL PORTD	    ; Vuelvo al banco de PORTD para comenzar.
+	CLRF COUNT
+	MOVF COUNT,W
+	CALL D7_SEG
+	MOVWF PORTD ; inicia en 0
+	GOTO INICIO
+	
+INICIO
+	GOTO $ ;solo espero interrupcion
+	
+RUT_INT
+	BTFSS INTCON, INTF
+	RETFIE ;es por las du, pero se supone que es la unica interr
+	BCF INTCON, INTF ;bajo bandera
+	INCF COUNT,F
+	MOVLW 0X0A
+	SUBWF COUNT,W ;si da cero significa que estoy en 0A P pot lo tanto debo reset count
+	BTFSS STATUS,Z
+	GOTO SHOW_
+	CLRF COUNT ; limpio contador
+SHOW_
+	MOVF COUNT,W
+	CALL D7_SEG
+	MOVWF PORTD
+	RETFIE
+	
+D7_SEG
+	ADDWF PCL,F
+	RETLW    b'00111111'	    ; 0
+	RETLW    b'00000110'	    ; 1
+	RETLW    b'01011011'	    ; 2
+	RETLW    b'01001111'	    ; 3
+	RETLW    b'01100110'	    ; 4
+	RETLW    b'01101101'	    ; 5
+	RETLW    b'01111101'	    ; 6
+	RETLW    b'00000111'	    ; 7
+	RETLW    b'01111111'	    ; 8
+	RETLW    b'01101111'	    ; 9
+
+    END
