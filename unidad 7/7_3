@@ -1,4 +1,4 @@
-; CONTAR DE 00 A 99 INCREMENTANDO CON RB0 Y MOSTRAR EN DISPLAY
+; CONTAR DE 0000 A 9999 INCREMENTANDO CON RB0 Y MOSTRAR EN DISPLAY
 
 
     LIST    P = 16F887
@@ -8,11 +8,12 @@
 	__CONFIG    _CONFIG2, _BOR4V_BOR40V & _WRT_OFF
 	
 	
-UNID_    EQU	    0x20    ; Unidades y decenas, con sus respectivos
-DECEN_    EQU	    0x21    ; límites 
-UNID_LIM   EQU	    0x22    ; 
-DECEN_LIM   EQU	    0x23
-DIS_ON    EQU	    0x24    ; Display a encender.
+D_    EQU	    0x20    ; Unidades y decenas, con sus respectivos
+D_2    EQU	    0x21    ; límites 
+D_3    EQU	    0x22    ; Unidades y decenas, con sus respectivos
+D_4    EQU	    0x23    ; límites 
+LIM_	EQU	    0X24
+DIS_ON    EQU	    0x25    ; Display a encender.
 W_TEMP    EQU	    0x70    ; Registros para salvar contexto.
 STATUS_TEMP    EQU  0x71
   
@@ -24,11 +25,12 @@ STATUS_TEMP    EQU  0x71
 	    
 	    ORG	    0x05
 	    
-CONFIG_	    CLRF    UNID_	    ; Comienzo en 00 y voy hasta 99.
-	    CLRF    DECEN_
+CONFIG_	    CLRF    D_	    ; Comienzo en 00 y voy hasta 99.
+	    CLRF    D_2
+	    CLRF    D_3   ; Comienzo en 00 y voy hasta 99.
+	    CLRF    D_4
 	    MOVLW   0x0A
-	    MOVWF   UNID_LIM
-	    MOVWF   DECEN_LIM
+	    MOVWF   LIM_
 	    CLRF    DIS_ON	    ; Comienzo con el display 0, y voy a
 	    BANKSEL TRISA	    ; PORTA y PORTC serán outputs digitales.
 	    CLRF    TRISA
@@ -39,7 +41,7 @@ CONFIG_	    CLRF    UNID_	    ; Comienzo en 00 y voy hasta 99.
 	    MOVWF   TRISB
 	    BANKSEL ANSELH
 	    CLRF    ANSELH
-	    MOVLW .217
+	    MOVLW .235
 	    MOVWF TMR0
 	    BANKSEL OPTION_REG	    
 	    MOVLW   b'10000111'	   
@@ -54,7 +56,7 @@ MUX	    MOVF    DIS_ON,W
 	    CALL    D_SELECT
 	    MOVWF   PORTC
 	    MOVF   DIS_ON,W
-	    CALL    D_OR_U
+	    CALL    DISPLAY_ON
 	    MOVWF   FSR
 	    MOVF    INDF,W
 	    CALL    VALOR_DISP
@@ -76,11 +78,14 @@ VALOR_DISP  ADDWF   PCL,F	    ; Retorno el valor a mostrar por el display.
 D_SELECT    ADDWF   PCL,F	    ; Tabla para elegir qué display encender.
 	    RETLW   B'11111110'
 	    RETLW   B'11111101'
+	    RETLW   B'11111011'
+	    RETLW   B'11110111'
 
-D_OR_U      ADDWF   PCL,F	    ; Tabla para mover a FSR la dirección de
-	    RETLW   0x20	    ; las unidades o decenas según el display a
-	    RETLW   0x21	    ; encender.
-	    
+DISPLAY_ON      ADDWF   PCL,F	    ; Tabla para mover a FSR la dirección de numero a mostrar
+	    RETLW   0x20	    ; 
+	    RETLW   0x21	    ; 
+	    RETLW   0x22
+	    RETLW   0x23
 	    
 RUT_INT	    MOVWF   W_TEMP	    ; Salvo el estado de W y STATUS
 	    SWAPF   STATUS,W	   
@@ -90,28 +95,45 @@ RUT_INT	    MOVWF   W_TEMP	    ; Salvo el estado de W y STATUS
 	    BTFSS   INTCON,T0IF
 	    GOTO FINISH
 	    BCF INTCON, T0IF  ;multiplexado de displayy
-	    MOVLW .217  ;recargo timer
+	    MOVLW .235  ;recargo timer
 	    MOVWF TMR0
 	    INCF    DIS_ON
-	    BTFSC   DIS_ON,1
+	    BTFSC   DIS_ON,2
 	    CLRF    DIS_ON
 	    GOTO FINISH
 	    
 INT_ON	    
 	    BCF	    INTCON,INTF
-	    INCF    UNID_,F
-	    MOVF    UNID_,W
-	    SUBWF   UNID_LIM,W
+	    INCF    D_,F
+	    MOVF    D_,W
+	    SUBWF   LIM_,W
 	    BTFSC   STATUS,Z
-	    CALL    RESET_UNI
+	    CALL    RESET_D_
+	    GOTO    FINISH
+RESET_D_
+	    CLRF    D_
+	    INCF    D_2,F
+	    MOVF    D_2,W
+	    SUBWF   LIM_,W
+	    BTFSC   STATUS,Z
+	    CALL    RESET_D_2
+	    GOTO    FINISH
+RESET_D_2
+	    CLRF    D_2
+	    INCF    D_3,F
+	    MOVF    D_3,W
+	    SUBWF   LIM_,W
+	    BTFSC   STATUS,Z
+	    CALL    RESET_D_3
 	    GOTO    FINISH
 	    
-RESET_UNI   CLRF    UNID_
-	    INCF    DECEN_,F
-	    MOVF    DECEN_,W
-	    SUBWF   DECEN_LIM,W
+RESET_D_3  
+	    CLRF    D_3
+	    INCF    D_4,F
+	    MOVF    D_4,W
+	    SUBWF   LIM_,W
 	    BTFSC   STATUS,Z
-	    CLRF    DECEN_
+	    CLRF    D_4
 	    RETURN
 	    
 FINISH	    SWAPF   STATUS_TEMP,W ; Cargo contexto para volver y bajo la flag.
@@ -121,3 +143,5 @@ FINISH	    SWAPF   STATUS_TEMP,W ; Cargo contexto para volver y bajo la flag.
 	    RETFIE
 	    
 	    END
+
+
