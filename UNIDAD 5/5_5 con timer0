@@ -20,7 +20,7 @@ CONFIG_
 	BSF TRISB,0
 	BANKSEL TRISA	    ; Seteo RA4 como entrada
 	BSF TRISA,4
-	BANKSEL TRISD	    ; Seteo RB<7:0> como salida
+	BANKSEL TRISD	    ; Seteo RD<7:0> como salida
 	MOVLW   b'00000000'	    
 	MOVWF   TRISD
 	BANKSEL ANSEL	    ; Seteo PORTA como digital.
