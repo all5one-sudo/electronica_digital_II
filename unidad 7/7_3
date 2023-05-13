@@ -8,10 +8,10 @@
 	__CONFIG    _CONFIG2, _BOR4V_BOR40V & _WRT_OFF
 	
 	
-D_    EQU	    0x20    ; Unidades y decenas, con sus respectivos
-D_2    EQU	    0x21    ; límites 
-D_3    EQU	    0x22    ; Unidades y decenas, con sus respectivos
-D_4    EQU	    0x23    ; límites 
+D_    EQU	    0x20     
+D_2    EQU	    0x21    
+D_3    EQU	    0x22   
+D_4    EQU	    0x23   
 LIM_	EQU	    0X24
 DIS_ON    EQU	    0x25    ; Display a encender.
 W_TEMP    EQU	    0x70    ; Registros para salvar contexto.
