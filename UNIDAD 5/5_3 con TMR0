@@ -1,0 +1,101 @@
+	#INCLUDE    <P16F887.INC>
+
+	    LIST    P = 16F887
+
+
+	__CONFIG    _CONFIG1, _FOSC_INTRC_NOCLKOUT & _WDTE_OFF & _PWRTE_OFF & _MCLRE_ON & _CP_OFF & _CPD_OFF & _BOREN_ON & _IESO_ON & _FCMEN_ON & _LVP_ON
+	__CONFIG    _CONFIG2, _BOR4V_BOR40V & _WRT_OFF
+	    
+COUNT   EQU	    0x70    ;
+   
+	    
+	    ORG	    0x00
+	    
+	    GOTO    CONFIG_	    
+	    
+	    ORG	    0x04
+	    
+	    GOTO    RUT_INT	    
+				    
+	    
+            ORG	    0x05
+	    
+CONFIG_    NOP			    ;
+	    BANKSEL TRISB	    ; 
+	    MOVLW b'11110111' ;RB2 como salida y RB1-2 como entradas
+	    MOVWF TRISB
+	    BANKSEL ANSELH
+	    CLRF ANSELH ; todo digital
+	    BANKSEL OPTION_REG
+	    MOVLW b'10000111'
+	    MOVWF OPTION_REG ;selecciono ps para el time luego
+	    BANKSEL IOCB
+	    MOVLW b'00000110' ; solo en RB1-2 como interrupcion de nivel
+	    MOVWF IOCB
+	    BANKSEL INTCON
+	    MOVLW b'10001000' ; prendo interrup globales, por RB y limpio flag
+	    MOVWF INTCON
+	    BSF STATUS,6
+	    BCF STATUS,5 ; banco dos, tengo timer y puerto
+	    CLRF PORTB ; arranco apagado relé
+	    GOTO INICIO
+	    
+INICIO
+	    GOTO $ ; solo espero interrupciones
+	    
+RUT_INT
+	    BTFSC INTCON, T0IF
+	    GOTO TIMER_
+	    BTFSS INTCON, RBIF
+	    RETFIE
+	    BTFSS PORTB,1   ;chequeo los estados de la entrada para configurar time
+	    GOTO RB1_ON
+	    BTFSS PORTB,2
+	    GOTO RB1_ON
+	    BCF INTCON,RBIF ; bajo bandera
+	    GOTO OFF_RELE
+	    
+TIMER_
+	    BCF INTCON,T0IF ; bajo bandera
+	    MOVLW .61
+	    MOVWF TMR0 ;recargo timer
+	    DECFSZ COUNT,F
+	    RETFIE
+	    GOTO OFF_RELE
+RB1_ON
+	    BTFSS PORTB,2
+	    GOTO AMBOS_ON
+	    MOVLW .20	    ;solo rb1 está presionado
+	    MOVWF COUNT
+	    BSF PORTB,3 ;activo salida
+	    GOTO PRENDER_TIMER
+RB2_ON
+	    MOVLW .40	    ;solo rb2 está presionado
+	    MOVWF COUNT
+	    BSF PORTB,3 ;activo salida
+	    GOTO PRENDER_TIMER
+AMBOS_ON
+	    MOVLW .60	    ;ambos están presionados
+	    MOVWF COUNT
+	    BSF PORTB,3 ;activo salida
+	    GOTO PRENDER_TIMER
+PRENDER_TIMER
+	    MOVLW .61	   
+	    MOVWF TMR0 ;50ms
+	    BSF INTCON,T0IE ;habilito interr por tm0
+	    BCF INTCON,T0IF ; bajo bandera
+	    BCF INTCON,RBIF ; bajo bandera
+	    RETFIE
+OFF_RELE
+	    BCF PORTB,3 ;salida apagada
+	    BCF INTCON,T0IE ;deshabilito interr por tm0
+	    RETFIE
+	    
+	    END
+	    
+	    	    
+	    
+	    
+	    
+	    
+	    
