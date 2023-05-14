@@ -1,0 +1,57 @@
+#INCLUDE <P16F887.INC>
+    LIST P=16F887
+
+    __CONFIG    _CONFIG1, _FOSC_INTRC_NOCLKOUT & _WDTE_OFF & _PWRTE_OFF & _MCLRE_ON & _CP_OFF & _CPD_OFF & _BOREN_ON & _IESO_ON & _FCMEN_ON & _LVP_ON
+    __CONFIG    _CONFIG2, _BOR4V_BOR40V & _WRT_OFF
+
+COUNT_ EQU 0X70
+ON_OFF EQU 0X71
+REP_    EQU 0X72
+    
+    ORG 0X00
+    GOTO CONFIG_
+    ORG 0X04
+    GOTO RUT_INT
+    ORG 0X05
+
+CONFIG_
+    BANKSEL TRISD
+    BCF TRISD, 0 ;puerto RD0 como salida, ahí veo señal generada
+    BANKSEL OPTION_REG
+    MOVLW b'00000111';elijo ps=256
+    MOVWF OPTION_REG
+    BANKSEL TMR0
+    MOVLW .61
+    MOVWF TMR0 ;cada 25ms interrumpe
+    MOVLW .2
+    MOVWF REP_
+    MOVLW .20
+    MOVWF COUNT_
+    BSF ON_OFF,0 ;arranco haciendo pulsos
+    MOVLW b'10100000' ;habilito interr globales y por tmr0, ademas bajo bandera
+    MOVWF INTCON
+    CLRF PORTD
+    GOTO INICIO
+INICIO
+    GOTO $ ;el programa en si no hace nada solo espero interr
+    
+RUT_INT
+    BTFSS INTCON,T0IF
+    RETFIE
+    BCF INTCON, T0IF; bajo bandera
+    MOVLW .61 ;recargo
+    MOVWF TMR0
+    DECFSZ REP_,F
+    RETFIE ;paso 25ms no hago nada
+    MOVLW .2 ;pasaron los 50ms
+    MOVWF REP_ ;seteo de cuelta para solo hacer algo a los 50ms
+    BTFSC ON_OFF,0
+    COMF PORTD,F ;cambio nivel de salida , si estamos en off no hago esto dejo apagado
+    DECFSZ COUNT_,F;
+    RETFIE ;no paso el seg
+    COMF ON_OFF,F ;cada 1 segundo hago los pulsos, uno si otro no
+    MOVLW .20
+    MOVWF COUNT_ ;seteo de vuelta
+    RETFIE
+
+    END
