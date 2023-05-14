@@ -1,4 +1,6 @@
 ;no me dice nada de guardar cuenta, asi que solo cuando se haya contado esa cantidad de veces activo timer1
+;ahora esta para poder visualizar resultado en proteus
+;para cumplir consigna V_max=255 y REP_=8
 #include <p16f887.inc>
     list p=16f887
    
