@@ -1,0 +1,90 @@
+;no me dice nada de guardar cuenta, asi que solo cuando se haya contado esa cantidad de veces activo timer1
+#include <p16f887.inc>
+    list p=16f887
+   
+; CONFIG1
+; __config 0x3FF7
+ __CONFIG _CONFIG1, _FOSC_EXTRC_CLKOUT & _WDTE_OFF & _PWRTE_OFF & _MCLRE_ON & _CP_OFF & _CPD_OFF & _BOREN_ON & _IESO_ON & _FCMEN_ON & _LVP_ON
+; CONFIG2
+; __config 0x3FFF
+ __CONFIG _CONFIG2, _BOR4V_BOR40V & _WRT_OFF
+ 
+V_MAX EQU 0X70
+REP_ EQU 0X71
+ 
+    ORG 0X00
+    GOTO CONFIG_
+    ORG 0X04
+    GOTO ISR
+    ORG 0X05
+    
+CONFIG_
+    MOVLW .2
+    MOVWF V_MAX
+    MOVLW .2
+    MOVWF REP_
+    BANKSEL TRISB
+    BSF TRISB, 0 ;entrada RB0
+    BANKSEL ANSEL
+    CLRF ANSEL
+    BANKSEL ANSELH
+    CLRF ANSELH
+    BANKSEL TRISA
+    BCF TRISA, 4 ;salida RB4
+    BANKSEL OPTION_REG ; 
+    CLRF OPTION_REG ;activo pull, que sea inrer por flanco descen 
+    BANKSEL WPUB
+    BSF WPUB,0 ; activo pull en RB0
+    BANKSEL PIE1
+    BCF PIE1,0
+    BANKSEL T1CON ;config tmr1 para cuando se habilite
+    MOVLW b'00110001';ps=8
+    MOVWF T1CON 
+    MOVLW b'11010000'; b7=activo inter gral,b6=activo peie para luego timer1,b4=activo inte
+    MOVWF INTCON
+    clrf PORTA
+    GOTO INICIO
+INICIO
+    GOTO $;solo espero interr
+    
+ISR
+    BTFSC INTCON,INTF ;PREGUNTO POR BANDERA DE INT
+    GOTO DEC_
+TEST
+    BTFSC PIR1,0 ;PREGUNTO POR BANDERA DE TIMER 1
+    GOTO TIMER_1
+    RETFIE
+DEC_
+    BTFSS INTCON,INTE
+    GOTO TEST
+    BCF INTCON, INTF;BAJO BANDERA
+    DECFSZ V_MAX,F
+    RETFIE
+    MOVLW .2 ;recargo para volver a contar
+    MOVWF V_MAX
+    DECFSZ REP_,F
+    RETFIE 
+    BCF INTCON, INTE ;deshabilito interr por rb
+    MOVLW b'11011100'        ;empizo activacion timer
+    MOVWF TMR1L
+    MOVLW b'00001011'
+    MOVWF TMR1H
+    BANKSEL PIE1 ;se contaron las 2048, activo timer para prender y apagar led
+    BSF PIE1,0 ;activo timer1
+    banksel PIR1
+    BCF PIR1,0 ;BAJO BANDERA
+    comf PORTA ;enciendo led
+    retfie
+    
+TIMER_1
+    BTFSS PIE1,0
+    RETFIE
+    BCF PIR1,0 ;BAJO BANDERA
+    MOVLW b'11011100'        ;SETEO
+    MOVWF TMR1L
+    MOVLW b'00001011'
+    MOVWF TMR1H
+    COMF PORTA ; PRENDO / APAGO
+    RETFIE
+    
+    END
